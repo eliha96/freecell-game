@@ -1,0 +1,17 @@
+{
+  "name": "פריסל קלאסי",
+  "short_name": "פריסל",
+  "description": "משחק פריסל קלאסי ואותנטי ללא פרסומות למובייל",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#076324",
+  "theme_color": "#076324",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
