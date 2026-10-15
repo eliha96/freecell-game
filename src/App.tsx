@@ -11,6 +11,7 @@ import {
 import { canPlaceOnFoundation, isGameWon } from './engine/rules';
 import { sounds } from './engine/sound';
 import { HeaderBar } from './components/HeaderBar';
+import { BottomBar } from './components/BottomBar';
 import { GameBoard } from './components/GameBoard';
 import { SelectDealModal } from './components/SelectDealModal';
 import { SettingsModal } from './components/SettingsModal';
@@ -223,26 +224,30 @@ export function App() {
   }, [handleUndo, handleRedo, handleNewGame]);
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden green-felt text-white select-none">
-      {/* Top Header Bar */}
+    <div className="flex flex-col h-screen h-[100dvh] w-screen overflow-hidden green-felt text-white select-none">
+      {/* Top Slim HUD Bar */}
       <HeaderBar
         dealNumber={gameState.dealNumber}
         movesCount={gameState.movesCount}
         elapsedSeconds={gameState.elapsedSeconds}
+        onOpenSelectDeal={() => setIsSelectDealOpen(true)}
+      />
+
+      {/* Main FreeCell Game Board - Fills height dynamically */}
+      <GameBoard
+        gameState={gameState}
+        onMove={handleMove}
+        onAutoComplete={handleAutoComplete}
+      />
+
+      {/* Bottom Action Bar (Thumb Zone) - Always visible, never cut off */}
+      <BottomBar
         canUndo={gameState.history.length > 0}
         canRedo={gameState.redoStack.length > 0}
         onUndo={handleUndo}
         onRedo={handleRedo}
         onNewGame={handleNewGame}
-        onOpenSelectDeal={() => setIsSelectDealOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
-      />
-
-      {/* Main FreeCell Game Board */}
-      <GameBoard
-        gameState={gameState}
-        onMove={handleMove}
-        onAutoComplete={handleAutoComplete}
       />
 
       {/* Select Deal Modal */}

@@ -58,11 +58,43 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   const [selectedLocation, setSelectedLocation] = useState<CardLocation | null>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
   const boardRef = useRef<HTMLDivElement | null>(null);
+  const tableauContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // Responsive dynamic measurement for filling screen height
+  const [boardHeight, setBoardHeight] = useState<number>(600);
+  const [cardWidth, setCardWidth] = useState<number>(45);
 
   // Targets bounding client rects for hit-testing drops
   const freeCellRefs = useRef<(HTMLDivElement | null)[]>([]);
   const foundationRefs = useRef<(HTMLDivElement | null)[]>([]);
   const tableauRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  // Track dimensions to dynamically scale vertical cascade
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (tableauContainerRef.current) {
+        const h = tableauContainerRef.current.clientHeight;
+        if (h > 100) setBoardHeight(h);
+      } else if (boardRef.current) {
+        const h = boardRef.current.clientHeight;
+        if (h > 100) setBoardHeight(h - 90);
+      }
+
+      if (freeCellRefs.current[0]) {
+        const w = freeCellRefs.current[0].clientWidth;
+        if (w > 20) setCardWidth(w);
+      }
+    };
+
+    updateDimensions();
+    const timer = setTimeout(updateDimensions, 100);
+    window.addEventListener('resize', updateDimensions);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', updateDimensions);
+    };
+  }, []);
 
   // Clear selection if board changes or won
   useEffect(() => {
@@ -368,7 +400,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           currentX >= rect.left &&
           currentX <= rect.right &&
           currentY >= rect.top &&
-          currentY <= rect.bottom + 250
+          currentY <= rect.bottom + 350
         ) {
           const targetCol = gameState.tableau[colIdx];
           const targetTop = targetCol.length > 0 ? targetCol[targetCol.length - 1] : null;
@@ -393,124 +425,138 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
   const isEligibleAutoComplete = canAutoComplete(gameState);
 
+  // Dynamic vertical offset calculation so cards comfortably fill the phone height!
+  const maxColLength = Math.max(...gameState.tableau.map((col) => col.length), 7);
+  const cardHeight = cardWidth * (96 / 71);
+  const availableCascadeHeight = Math.max(220, boardHeight - cardHeight - 30);
+  const calculatedOffset = Math.floor(availableCascadeHeight / Math.max(maxColLength - 1, 6));
+  // Allow up to 38px on mobile, ensuring generous visibility of numbers and suits!
+  const verticalOffset = Math.min(38, Math.max(16, calculatedOffset));
+
   return (
     <div
       ref={boardRef}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={() => setDragState(null)}
-      className="relative flex-1 w-full max-w-5xl mx-auto flex flex-col justify-start px-1.5 sm:px-3 pt-2 pb-3 overflow-hidden select-none touch-none"
+      className="relative flex-1 w-full max-w-4xl mx-auto flex flex-col justify-start px-1 sm:px-2 pt-1.5 sm:pt-2.5 pb-1 overflow-hidden select-none touch-none"
     >
       {/* Auto Complete Prompt Bar (when available) */}
       {isEligibleAutoComplete && !gameState.isWon && (
-        <div className="w-full mb-2 bg-amber-400 text-amber-950 font-bold px-3 py-1.5 rounded-lg flex items-center justify-between shadow-lg animate-pulse">
+        <div className="w-full mb-1.5 bg-amber-400 text-amber-950 font-bold px-3 py-1.5 rounded-lg flex items-center justify-between shadow-lg animate-pulse shrink-0">
           <div className="flex items-center gap-1.5 text-xs sm:text-sm">
             <Zap className="w-4 h-4 fill-amber-950" />
             <span>הלוח פתור! ניתן לסיים אוטומטית</span>
           </div>
           <button
             onClick={onAutoComplete}
-            className="bg-amber-950 hover:bg-black text-amber-200 text-xs px-3 py-1 rounded-md font-bold transition active:scale-95 shadow"
+            className="bg-amber-950 hover:bg-black text-amber-200 text-xs px-3 py-1 rounded-md font-bold transition active:scale-95 shadow cursor-pointer"
           >
             סיים משחק
           </button>
         </div>
       )}
 
-      {/* TOP ROW: 4 Free Cells (Left) + 4 Foundations (Right) */}
-      <div className="w-full grid grid-cols-8 gap-1.5 sm:gap-2.5 mb-3 sm:mb-4">
-        {/* 4 Free Cells (indices 0..3) */}
-        {gameState.freeCells.map((card, idx) => {
-          const isSelected =
-            selectedLocation?.pile === 'freecell' && selectedLocation.cellIndex === idx;
-          const isDraggingThis =
-            dragState?.hasMoved &&
-            dragState.source.pile === 'freecell' &&
-            dragState.source.cellIndex === idx;
+      {/* TOP ROW: 4 Free Cells (Left) | Divider | 4 Foundations (Right) */}
+      <div className="w-full flex items-center justify-between gap-1 sm:gap-2 mb-2 sm:mb-3 shrink-0">
+        {/* Left Group: 4 Free Cells (indices 0..3) */}
+        <div className="flex-1 grid grid-cols-4 gap-1 sm:gap-1.5">
+          {gameState.freeCells.map((card, idx) => {
+            const isSelected =
+              selectedLocation?.pile === 'freecell' && selectedLocation.cellIndex === idx;
+            const isDraggingThis =
+              dragState?.hasMoved &&
+              dragState.source.pile === 'freecell' &&
+              dragState.source.cellIndex === idx;
 
-          return (
-            <div
-              key={`freecell-slot-${idx}`}
-              ref={(el) => {
-                freeCellRefs.current[idx] = el;
-              }}
-              onClick={() => {
-                if (!card) handleEmptySpotTap({ type: 'freecell', index: idx });
-              }}
-              className="relative aspect-[71/96] w-full rounded-sm md:rounded-md freecell-slot flex items-center justify-center cursor-pointer transition hover:bg-black/25"
-            >
-              {!card ? (
-                <span className="text-white/20 font-bold text-xs sm:text-base select-none">
-                  F{idx + 1}
-                </span>
-              ) : (
-                <CardView
-                  card={card}
-                  cardFaceTheme={gameState.settings.cardFaceTheme}
-                  isSelected={isSelected}
-                  isDragging={isDraggingThis}
-                  onPointerDown={(e) =>
-                    handlePointerDown(e, { pile: 'freecell', cellIndex: idx })
-                  }
-                />
-              )}
-            </div>
-          );
-        })}
+            return (
+              <div
+                key={`freecell-slot-${idx}`}
+                ref={(el) => {
+                  freeCellRefs.current[idx] = el;
+                }}
+                onClick={() => {
+                  if (!card) handleEmptySpotTap({ type: 'freecell', index: idx });
+                }}
+                className="relative aspect-[71/96] w-full rounded-sm md:rounded-md freecell-slot flex items-center justify-center cursor-pointer transition hover:bg-black/25"
+              >
+                {!card ? (
+                  <span className="text-white/20 font-bold text-[10px] sm:text-xs select-none">
+                    F{idx + 1}
+                  </span>
+                ) : (
+                  <CardView
+                    card={card}
+                    cardFaceTheme={gameState.settings.cardFaceTheme}
+                    isSelected={isSelected}
+                    isDragging={isDraggingThis}
+                    onPointerDown={(e) =>
+                      handlePointerDown(e, { pile: 'freecell', cellIndex: idx })
+                    }
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
 
-        {/* 4 Foundations (indices 0..3) */}
-        {gameState.foundations.map((pile, idx) => {
-          const topCard = pile.length > 0 ? pile[pile.length - 1] : null;
-          const isSelected =
-            selectedLocation?.pile === 'foundation' &&
-            selectedLocation.foundationIndex === idx;
-          const isDraggingThis =
-            dragState?.hasMoved &&
-            dragState.source.pile === 'foundation' &&
-            dragState.source.foundationIndex === idx;
+        {/* Subtle Visual Divider between FreeCells & Foundations */}
+        <div className="w-[1.5px] h-7 sm:h-10 bg-white/20 shrink-0 mx-0.5 sm:mx-1 rounded-full" />
 
-          // Suit watermark for empty foundations
-          const suitSymbols = ['♣', '♦', '♥', '♠'];
+        {/* Right Group: 4 Foundations (indices 0..3) */}
+        <div className="flex-1 grid grid-cols-4 gap-1 sm:gap-1.5">
+          {gameState.foundations.map((pile, idx) => {
+            const topCard = pile.length > 0 ? pile[pile.length - 1] : null;
+            const isSelected =
+              selectedLocation?.pile === 'foundation' &&
+              selectedLocation.foundationIndex === idx;
+            const isDraggingThis =
+              dragState?.hasMoved &&
+              dragState.source.pile === 'foundation' &&
+              dragState.source.foundationIndex === idx;
 
-          return (
-            <div
-              key={`foundation-slot-${idx}`}
-              ref={(el) => {
-                foundationRefs.current[idx] = el;
-              }}
-              onClick={() => {
-                if (pile.length === 0) handleEmptySpotTap({ type: 'foundation', index: idx });
-              }}
-              className="relative aspect-[71/96] w-full rounded-sm md:rounded-md foundation-slot flex items-center justify-center cursor-pointer transition hover:bg-black/25"
-            >
-              {!topCard ? (
-                <span className="text-white/25 font-bold text-base sm:text-2xl select-none">
-                  {suitSymbols[idx]}
-                </span>
-              ) : (
-                <CardView
-                  card={topCard}
-                  cardFaceTheme={gameState.settings.cardFaceTheme}
-                  isSelected={isSelected}
-                  isDragging={isDraggingThis}
-                  onPointerDown={(e) =>
-                    handlePointerDown(e, { pile: 'foundation', foundationIndex: idx })
-                  }
-                />
-              )}
-            </div>
-          );
-        })}
+            // Suit watermark for empty foundations
+            const suitSymbols = ['♣', '♦', '♥', '♠'];
+
+            return (
+              <div
+                key={`foundation-slot-${idx}`}
+                ref={(el) => {
+                  foundationRefs.current[idx] = el;
+                }}
+                onClick={() => {
+                  if (pile.length === 0) handleEmptySpotTap({ type: 'foundation', index: idx });
+                }}
+                className="relative aspect-[71/96] w-full rounded-sm md:rounded-md foundation-slot flex items-center justify-center cursor-pointer transition hover:bg-black/25"
+              >
+                {!topCard ? (
+                  <span className="text-white/25 font-bold text-sm sm:text-xl select-none">
+                    {suitSymbols[idx]}
+                  </span>
+                ) : (
+                  <CardView
+                    card={topCard}
+                    cardFaceTheme={gameState.settings.cardFaceTheme}
+                    isSelected={isSelected}
+                    isDragging={isDraggingThis}
+                    onPointerDown={(e) =>
+                      handlePointerDown(e, { pile: 'foundation', foundationIndex: idx })
+                    }
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      {/* BOTTOM AREA: 8 Tableau Columns */}
-      <div className="w-full flex-1 grid grid-cols-8 gap-1.5 sm:gap-2.5 items-start">
+      {/* BOTTOM AREA: 8 Tableau Columns - Filling Screen Height */}
+      <div
+        ref={tableauContainerRef}
+        className="w-full flex-1 grid grid-cols-8 gap-1 sm:gap-1.5 items-start overflow-visible min-h-0"
+      >
         {gameState.tableau.map((col, colIdx) => {
           const isEmpty = col.length === 0;
-
-          // Dynamic vertical offset so long cascades fit nicely on mobile screens
-          // Standard offset is ~24px on desktop, ~16px-18px on small screens
-          const offsetStep = col.length > 10 ? 16 : 22;
 
           return (
             <div
@@ -521,7 +567,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
               onClick={() => {
                 if (isEmpty) handleEmptySpotTap({ type: 'tableau', index: colIdx });
               }}
-              className="relative w-full min-h-[140px] sm:min-h-[220px] rounded-sm md:rounded-md transition"
+              className="relative w-full h-full min-h-[220px] rounded-sm md:rounded-md transition"
             >
               {isEmpty ? (
                 <div className="relative aspect-[71/96] w-full rounded-sm md:rounded-md card-slot flex items-center justify-center cursor-pointer hover:bg-white/5">
@@ -545,7 +591,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                       key={card.id}
                       style={{
                         position: 'absolute',
-                        top: `${cardIdx * offsetStep}px`,
+                        top: `${cardIdx * verticalOffset}px`,
                         left: 0,
                         right: 0,
                         zIndex: cardIdx + 1,
@@ -578,9 +624,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         <div
           className="fixed pointer-events-none z-50 transition-none"
           style={{
-            left: `${dragState.currentX - 28}px`,
-            top: `${dragState.currentY - 38}px`,
-            width: '56px',
+            left: `${dragState.currentX - cardWidth / 2}px`,
+            top: `${dragState.currentY - (cardWidth * 96) / 71 / 2}px`,
+            width: `${Math.max(40, cardWidth)}px`,
             transform: 'scale(1.05)',
           }}
         >
@@ -589,7 +635,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
               key={`dragged-${card.id}`}
               style={{
                 position: idx === 0 ? 'relative' : 'absolute',
-                top: `${idx * 22}px`,
+                top: `${idx * verticalOffset}px`,
                 left: 0,
                 right: 0,
                 zIndex: 100 + idx,
