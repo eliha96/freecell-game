@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Volume2, VolumeX, Smartphone, Zap } from 'lucide-react';
 import type { GameSettings } from '../engine/types';
+import { sounds } from '../engine/sound';
 
 interface SettingsModalProps {
   settings: GameSettings;
@@ -110,7 +111,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <input
                 type="checkbox"
                 checked={settings.soundEnabled}
-                onChange={(e) => onUpdateSettings({ soundEnabled: e.target.checked })}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  onUpdateSettings({ soundEnabled: checked });
+                  if (checked) {
+                    sounds.unlockAudio();
+                    sounds.setMuted(false);
+                    sounds.playCardFlip();
+                  } else {
+                    sounds.setMuted(true);
+                  }
+                }}
                 className="sr-only peer"
               />
               <div className="w-11 h-6 bg-black/40 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
@@ -132,7 +143,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <input
                 type="checkbox"
                 checked={settings.hapticsEnabled}
-                onChange={(e) => onUpdateSettings({ hapticsEnabled: e.target.checked })}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  onUpdateSettings({ hapticsEnabled: checked });
+                  if (checked) {
+                    sounds.setHapticsEnabled(true);
+                    sounds.triggerHaptic(40);
+                  } else {
+                    sounds.setHapticsEnabled(false);
+                  }
+                }}
                 className="sr-only peer"
               />
               <div className="w-11 h-6 bg-black/40 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>

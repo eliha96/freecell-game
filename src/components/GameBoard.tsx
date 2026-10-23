@@ -231,6 +231,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             cardIndex: source.cardIndex!,
           });
           sounds.playCardFlip();
+          sounds.triggerHaptic(20);
         }
       } else if (source.pile === 'freecell') {
         setSelectedLocation({
@@ -238,12 +239,14 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           cellIndex: source.cellIndex!,
         });
         sounds.playCardFlip();
+        sounds.triggerHaptic(20);
       } else if (source.pile === 'foundation') {
         setSelectedLocation({
           pile: 'foundation',
           foundationIndex: source.foundationIndex!,
         });
         sounds.playCardFlip();
+        sounds.triggerHaptic(20);
       }
     },
     [gameState, onMove, selectedLocation]
@@ -318,6 +321,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     }
 
     if (e.button !== 0 && e.pointerType === 'mouse') return; // Left mouse button only
+
+    // Wake up Web Audio on direct user gesture
+    sounds.unlockAudio();
 
     let movingCards: Card[] = [];
     if (source.pile === 'tableau') {

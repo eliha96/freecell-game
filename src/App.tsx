@@ -33,10 +33,11 @@ export function App() {
   const [dealTrigger, setDealTrigger] = useState(0);
   const autoCompleteTimerRef = useRef<number | null>(null);
 
-  // Sync sound settings
+  // Sync sound and haptics settings
   useEffect(() => {
     sounds.setMuted(!gameState.settings.soundEnabled);
-  }, [gameState.settings.soundEnabled]);
+    sounds.setHapticsEnabled(gameState.settings.hapticsEnabled);
+  }, [gameState.settings.soundEnabled, gameState.settings.hapticsEnabled]);
 
   // Elapsed game timer
   useEffect(() => {
