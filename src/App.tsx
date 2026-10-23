@@ -16,6 +16,7 @@ import { GameBoard } from './components/GameBoard';
 import { SelectDealModal } from './components/SelectDealModal';
 import { SettingsModal } from './components/SettingsModal';
 import { WinCanvas } from './components/WinCanvas';
+import { LeaderboardModal } from './components/LeaderboardModal';
 
 export function App() {
   const [gameState, setGameState] = useState<GameState>(() => {
@@ -28,6 +29,8 @@ export function App() {
 
   const [isSelectDealOpen, setIsSelectDealOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [dealTrigger, setDealTrigger] = useState(0);
   const autoCompleteTimerRef = useRef<number | null>(null);
 
   // Sync sound settings
@@ -95,6 +98,7 @@ export function App() {
       clearInterval(autoCompleteTimerRef.current);
     }
     setGameState(createNewGame(undefined, gameState.settings));
+    setDealTrigger((prev) => prev + 1);
   }, [gameState.settings]);
 
   // Choose Deal
@@ -104,6 +108,7 @@ export function App() {
         clearInterval(autoCompleteTimerRef.current);
       }
       setGameState(createNewGame(dealNum, gameState.settings));
+      setDealTrigger((prev) => prev + 1);
     },
     [gameState.settings]
   );
@@ -114,6 +119,7 @@ export function App() {
       clearInterval(autoCompleteTimerRef.current);
     }
     setGameState(createNewGame(gameState.dealNumber, gameState.settings));
+    setDealTrigger((prev) => prev + 1);
   }, [gameState.dealNumber, gameState.settings]);
 
   // Update Settings
@@ -238,6 +244,7 @@ export function App() {
         gameState={gameState}
         onMove={handleMove}
         onAutoComplete={handleAutoComplete}
+        dealTrigger={dealTrigger}
       />
 
       {/* Bottom Action Bar (Thumb Zone) - Always visible, never cut off */}
@@ -247,6 +254,7 @@ export function App() {
         onUndo={handleUndo}
         onRedo={handleRedo}
         onNewGame={handleNewGame}
+        onOpenLeaderboard={() => setShowLeaderboard(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
 
@@ -272,10 +280,18 @@ export function App() {
           dealNumber={gameState.dealNumber}
           movesCount={gameState.movesCount}
           elapsedSeconds={gameState.elapsedSeconds}
+          foundations={gameState.foundations}
           onNewGame={handleNewGame}
           onReplayDeal={handleReplayDeal}
+          onOpenLeaderboard={() => setShowLeaderboard(true)}
         />
       )}
+
+      {/* Leaderboard Modal (rendered after WinCanvas with z-[60] so it sits cleanly on top) */}
+      <LeaderboardModal
+        isOpen={showLeaderboard}
+        onClose={() => setShowLeaderboard(false)}
+      />
     </div>
   );
 }

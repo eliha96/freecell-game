@@ -1,14 +1,34 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
-import { RotateCcw, Trophy } from 'lucide-react';
+import { RotateCcw, Trophy, Crown, Medal } from 'lucide-react';
+import type { Card } from '../engine/types';
+import { getRankLabel, getSuitSymbol } from '../engine/rules';
 import { sounds } from '../engine/sound';
+import {
+  recordFreeCellResult,
+  calculateFreeCellScore,
+  type RecordFreeCellResultOutcome,
+} from '../engine/leaderboard';
 
 interface WinCanvasProps {
   dealNumber: number;
   movesCount: number;
   elapsedSeconds: number;
+  foundations?: Card[][];
   onNewGame: () => void;
   onReplayDeal: () => void;
+  onOpenLeaderboard: () => void;
+}
+
+interface BouncingCard {
+  card: Card;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  width: number;
+  height: number;
+  active: boolean;
 }
 
 function formatTime(totalSeconds: number): string {
@@ -21,89 +41,310 @@ export const WinCanvas: React.FC<WinCanvasProps> = ({
   dealNumber,
   movesCount,
   elapsedSeconds,
+  foundations,
   onNewGame,
   onReplayDeal,
+  onOpenLeaderboard,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [outcome, setOutcome] = useState<RecordFreeCellResultOutcome | null>(null);
 
   useEffect(() => {
-    sounds.playWinFanfare();
+    // Record game result and determine record / top 5 status
+    const result = recordFreeCellResult(dealNumber, elapsedSeconds, movesCount);
+    setOutcome(result);
 
-    // Trigger celebratory confetti
-    const duration = 2.5 * 1000;
-    const end = Date.now() + duration;
+    if (result.isNewRecord) {
+      // Grand record fanfare!
+      sounds.playRecordFanfare();
 
-    const frame = () => {
-      confetti({
-        particleCount: 3,
-        angle: 60,
-        spread: 55,
-        origin: { x: 0 },
-      });
-      confetti({
-        particleCount: 3,
-        angle: 120,
-        spread: 55,
-        origin: { x: 1 },
-      });
+      // Double celebratory fireworks & golden confetti burst!
+      const end = Date.now() + 3.5 * 1000;
+      const colors = ['#f59e0b', '#fbbf24', '#ffffff', '#10b981', '#3b82f6'];
 
-      if (Date.now() < end) {
-        requestAnimationFrame(frame);
+      const frame = () => {
+        confetti({
+          particleCount: 5,
+          angle: 60,
+          spread: 65,
+          origin: { x: 0, y: 0.65 },
+          colors,
+        });
+        confetti({
+          particleCount: 5,
+          angle: 120,
+          spread: 65,
+          origin: { x: 1, y: 0.65 },
+          colors,
+        });
+
+        if (Date.now() < end) {
+          requestAnimationFrame(frame);
+        }
+      };
+      frame();
+    } else {
+      // Regular win fanfare & confetti
+      sounds.playWinFanfare();
+
+      const duration = 2.5 * 1000;
+      const end = Date.now() + duration;
+
+      const frame = () => {
+        confetti({
+          particleCount: 3,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0 },
+        });
+        confetti({
+          particleCount: 3,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1 },
+        });
+
+        if (Date.now() < end) {
+          requestAnimationFrame(frame);
+        }
+      };
+      frame();
+    }
+
+    // Classic Windows cascading cards waterfall animation
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // Collect cards to bounce: from Kings (13) down to Aces (1)
+    const cardsToBounce: Card[] = [];
+    if (foundations && foundations.length > 0) {
+      for (let rank = 13; rank >= 1; rank--) {
+        for (let f = 0; f < 4; f++) {
+          const found = foundations[f]?.find((c) => c.rank === rank);
+          if (found) cardsToBounce.push(found);
+        }
       }
+    }
+
+    // If foundations weren't fully populated or passed, generate classic 52 cards
+    if (cardsToBounce.length === 0) {
+      const suits: Array<'clubs' | 'diamonds' | 'hearts' | 'spades'> = ['clubs', 'diamonds', 'hearts', 'spades'];
+      for (let rank = 13; rank >= 1; rank--) {
+        for (const suit of suits) {
+          cardsToBounce.push({
+            id: `bounce-${suit}-${rank}`,
+            suit,
+            rank: rank as any,
+            color: suit === 'hearts' || suit === 'diamonds' ? 'red' : 'black',
+            isFaceUp: true,
+          });
+        }
+      }
+    }
+
+    const cardWidth = Math.min(80, Math.floor(canvas.width / 6));
+    const cardHeight = Math.floor(cardWidth * 1.4);
+
+    const startX = canvas.width * 0.7;
+    const startY = 80;
+
+    let currentCardIndex = 0;
+    const activeCards: BouncingCard[] = [];
+
+    const drawCardToCanvas = (c: BouncingCard) => {
+      ctx.save();
+      ctx.translate(c.x, c.y);
+
+      // Card Body
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = '#cccccc';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(0, 0, c.width, c.height, 6);
+      ctx.fill();
+      ctx.stroke();
+
+      // Card Text
+      const isRed = c.card.color === 'red';
+      ctx.fillStyle = isRed ? '#d32f2f' : '#1a1a1a';
+      ctx.font = `bold ${Math.floor(c.height * 0.2)}px Arial, sans-serif`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+
+      const label = getRankLabel(c.card.rank);
+      const symbol = getSuitSymbol(c.card.suit);
+
+      ctx.fillText(label, 6, 4);
+      ctx.font = `${Math.floor(c.height * 0.18)}px Arial, sans-serif`;
+      ctx.fillText(symbol, 6, 4 + c.height * 0.2);
+
+      // Center Symbol
+      ctx.font = `${Math.floor(c.height * 0.35)}px Arial, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(symbol, c.width / 2, c.height / 2);
+
+      ctx.restore();
     };
-    frame();
-  }, []);
+
+    let animationId: number;
+    let frameCount = 0;
+
+    const loop = () => {
+      frameCount++;
+
+      if (frameCount % 12 === 0 && currentCardIndex < cardsToBounce.length) {
+        const card = cardsToBounce[currentCardIndex];
+        activeCards.push({
+          card,
+          x: startX + (Math.random() * 60 - 30),
+          y: startY,
+          vx: (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 5),
+          vy: -(4 + Math.random() * 6),
+          width: cardWidth,
+          height: cardHeight,
+          active: true,
+        });
+        currentCardIndex++;
+      }
+
+      // DO NOT clear canvas on each frame!
+      // This is the classic Windows Solitaire/FreeCell cascade waterfall
+      for (const c of activeCards) {
+        if (!c.active) continue;
+
+        drawCardToCanvas(c);
+
+        c.x += c.vx;
+        c.y += c.vy;
+        c.vy += 0.45; // gravity
+
+        if (c.y + c.height >= canvas.height) {
+          c.y = canvas.height - c.height;
+          c.vy = -c.vy * 0.82; // bounce damping
+          if (Math.abs(c.vy) < 1.5) {
+            c.vy = 0;
+          }
+        }
+
+        if (c.x <= 0) {
+          c.x = 0;
+          c.vx = -c.vx * 0.9;
+        } else if (c.x + c.width >= canvas.width) {
+          c.x = canvas.width - c.width;
+          c.vx = -c.vx * 0.9;
+        }
+
+        if (c.x < -c.width || c.x > canvas.width + c.width) {
+          c.active = false;
+        }
+      }
+
+      animationId = requestAnimationFrame(loop);
+    };
+
+    animationId = requestAnimationFrame(loop);
+
+    return () => {
+      cancelAnimationFrame(animationId);
+    };
+  }, [dealNumber, elapsedSeconds, movesCount, foundations]);
+
+  const finalScore = outcome?.score ?? calculateFreeCellScore(elapsedSeconds, movesCount);
+  const highScore = outcome?.allTimeHighScore ?? finalScore;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs pointer-events-auto">
       <canvas
         ref={canvasRef}
         className="absolute inset-0 pointer-events-none w-full h-full z-10"
       />
 
       <div
-        className="relative z-20 w-full max-w-sm bg-[#044317] border-2 border-amber-400/80 rounded-2xl shadow-2xl p-6 text-white text-center animate-in fade-in zoom-in-95 duration-200"
+        className="relative z-20 w-full max-w-sm bg-[#044317] border-2 border-amber-400/80 rounded-2xl shadow-2xl p-5 sm:p-6 text-white text-center animate-in fade-in zoom-in-95 duration-200"
         dir="rtl"
       >
-        <div className="w-16 h-16 bg-amber-400/20 border-2 border-amber-400 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg animate-bounce">
-          <Trophy className="w-9 h-9 text-amber-300" />
+        <div className="w-16 h-16 bg-amber-400/20 border-2 border-amber-400 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg animate-bounce">
+          <Trophy className="w-8 h-8 text-amber-300" />
         </div>
 
-        <h2 className="text-2xl font-black text-amber-300 tracking-wide mb-1">
+        <h2 className="text-2xl sm:text-3xl font-black text-amber-300 tracking-wide mb-1">
           ניצחון מזהיר!
         </h2>
-        <p className="text-xs text-green-200/90 mb-5">
+        <p className="text-xs text-green-200/90 mb-3">
           סיימת את משחק #{dealNumber} בהצלחה!
         </p>
 
-        <div className="grid grid-cols-2 gap-3 bg-black/30 p-3.5 rounded-xl border border-white/10 mb-6 text-sm">
+        {/* Record or Top 5 Badge */}
+        {outcome?.isNewRecord ? (
+          <div className="mb-3 py-2 px-3 bg-gradient-to-r from-amber-500/30 via-yellow-400/40 to-amber-500/30 border-2 border-amber-300 rounded-xl flex items-center justify-center gap-2 shadow-lg animate-pulse">
+            <Crown className="w-5 h-5 text-amber-300 fill-amber-300" />
+            <span className="font-black text-sm sm:text-base text-amber-200">
+              👑 שיא חדש נשבר! כל הכבוד!
+            </span>
+          </div>
+        ) : outcome?.rank ? (
+          <div className="mb-3 py-1.5 px-3 bg-emerald-500/25 border border-emerald-400 rounded-xl flex items-center justify-center gap-1.5 shadow">
+            <Medal className="w-4 h-4 text-amber-300" />
+            <span className="font-bold text-xs sm:text-sm text-emerald-200">
+              🌟 נכנסת ל-5 הגדולים! (מקום {outcome.rank})
+            </span>
+          </div>
+        ) : null}
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 gap-2 bg-black/35 p-3 rounded-xl border border-white/10 mb-4 text-xs sm:text-sm">
           <div className="flex flex-col items-center">
-            <span className="text-xs text-green-300/80">זמן משחק</span>
-            <span className="text-lg font-mono font-bold text-white mt-0.5">
+            <span className="text-green-300/80 text-[11px]">ניקוד המשחק</span>
+            <span className="text-xl font-mono font-black text-white">{finalScore}</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-green-300/80 text-[11px]">שיא כל הזמנים</span>
+            <span className="text-xl font-mono font-black text-amber-300">
+              {highScore}
+            </span>
+          </div>
+          <div className="flex flex-col items-center pt-2 border-t border-white/10">
+            <span className="text-green-300/80 text-[11px]">זמן משחק</span>
+            <span className="font-mono font-bold text-white">
               {formatTime(elapsedSeconds)}
             </span>
           </div>
-          <div className="flex flex-col items-center">
-            <span className="text-xs text-green-300/80">מספר מהלכים</span>
-            <span className="text-lg font-mono font-bold text-white mt-0.5">
-              {movesCount}
-            </span>
+          <div className="flex flex-col items-center pt-2 border-t border-white/10">
+            <span className="text-green-300/80 text-[11px]">מהלכים</span>
+            <span className="font-mono font-bold text-white">{movesCount}</span>
           </div>
         </div>
 
-        <div className="space-y-2.5">
+        {/* Action Buttons */}
+        <div className="space-y-2">
           <button
             onClick={onNewGame}
-            className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 active:scale-98 py-3 rounded-xl font-bold text-base shadow-lg transition"
+            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 active:scale-98 py-3 rounded-xl font-bold text-base shadow-lg transition cursor-pointer text-white"
           >
             <RotateCcw className="w-5 h-5" />
             <span>משחק חדש</span>
           </button>
+
           <button
             onClick={onReplayDeal}
-            className="w-full flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 active:scale-98 py-2.5 rounded-xl font-semibold text-sm border border-white/15 transition text-green-100"
+            className="w-full flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 active:scale-98 py-2 rounded-xl font-semibold text-xs sm:text-sm border border-white/15 transition text-green-100 cursor-pointer"
           >
             <span>שחק שוב באותו לוח (#{dealNumber})</span>
+          </button>
+
+          <button
+            onClick={onOpenLeaderboard}
+            className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 font-semibold text-xs sm:text-sm rounded-xl border border-amber-400/40 active:scale-98 transition cursor-pointer"
+          >
+            <Trophy className="w-4 h-4 text-amber-300" />
+            <span>הצג לוח שיאים מלא</span>
           </button>
         </div>
       </div>

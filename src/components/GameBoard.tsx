@@ -31,6 +31,7 @@ interface GameBoardProps {
     destination: MoveDestination
   ) => void;
   onAutoComplete: () => void;
+  dealTrigger?: number;
 }
 
 interface DragState {
@@ -54,10 +55,42 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   gameState,
   onMove,
   onAutoComplete,
+  dealTrigger,
 }) => {
   const [selectedLocation, setSelectedLocation] = useState<CardLocation | null>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
+  const [dealtCardsCount, setDealtCardsCount] = useState<number>(52);
+  const [isDealing, setIsDealing] = useState<boolean>(false);
   const boardRef = useRef<HTMLDivElement | null>(null);
+
+  // Trigger rapid dealing animation whenever dealTrigger changes
+  useEffect(() => {
+    if (dealTrigger === undefined) return;
+
+    setDealtCardsCount(0);
+    setIsDealing(true);
+
+    let count = 0;
+    const interval = setInterval(() => {
+      count++;
+      setDealtCardsCount(count);
+
+      // Play crisp deal sound
+      sounds.playCardDeal();
+
+      // Row completion flip sound
+      if (count % 8 === 0 || count === 52) {
+        sounds.playCardFlip();
+      }
+
+      if (count >= 52) {
+        clearInterval(interval);
+        setIsDealing(false);
+      }
+    }, 16); // 16ms * 52 cards = ~832ms total fast snappy deal
+
+    return () => clearInterval(interval);
+  }, [dealTrigger]);
   const tableauContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Responsive dynamic measurement for filling screen height
@@ -113,6 +146,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         foundationIndex?: number;
       }
     ) => {
+      if (isDealing) {
+        setDealtCardsCount(52);
+        setIsDealing(false);
+        return;
+      }
+
       // 1. If we already have a selected card:
       if (selectedLocation) {
         const isSameCard =
@@ -272,6 +311,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       foundationIndex?: number;
     }
   ) => {
+    if (isDealing) {
+      setDealtCardsCount(52);
+      setIsDealing(false);
+      return;
+    }
+
     if (e.button !== 0 && e.pointerType === 'mouse') return; // Left mouse button only
 
     let movingCards: Card[] = [];
@@ -436,6 +481,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   return (
     <div
       ref={boardRef}
+      onClick={() => {
+        if (isDealing) {
+          setDealtCardsCount(52);
+          setIsDealing(false);
+        }
+      }}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={() => setDragState(null)}
@@ -575,6 +626,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                 </div>
               ) : (
                 col.map((card, cardIdx) => {
+                  const dealOrder = cardIdx * 8 + colIdx;
+                  if (isDealing && dealOrder >= dealtCardsCount) {
+                    return null;
+                  }
+
                   const isSelected =
                     selectedLocation?.pile === 'tableau' &&
                     selectedLocation.colIndex === colIdx &&
