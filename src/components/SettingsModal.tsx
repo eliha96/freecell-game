@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Volume2, VolumeX, Smartphone, Zap, Palette } from 'lucide-react';
+import { X, Volume2, VolumeX, Smartphone, Zap, Palette, Eye } from 'lucide-react';
 import type { CardFaceTheme, GameSettings } from '../engine/types';
 import { sounds } from '../engine/sound';
 
@@ -147,6 +147,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 type="checkbox"
                 checked={settings.autoPlaySafeCards}
                 onChange={(e) => onUpdateSettings({ autoPlaySafeCards: e.target.checked })}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-black/40 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+            </label>
+          </div>
+
+          {/* Dim Covered Cards Toggle */}
+          <div className="flex items-center justify-between p-3 rounded-lg bg-black/20 border border-white/10">
+            <div className="flex items-start gap-2.5">
+              <Eye className="w-5 h-5 text-cyan-300 shrink-0 mt-0.5" />
+              <div>
+                <div className="font-semibold text-sm">הדגשת השורה הפתוחה למשחק</div>
+                <div className="text-[11px] text-green-200/75 mt-0.5 leading-snug">
+                  משאיר את שורת הקלפים הפתוחה בצבע מלא ומחשיך מעט קלפים מכוסים בטורים
+                </div>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer shrink-0 mr-3">
+              <input
+                type="checkbox"
+                checked={settings.dimCoveredCards ?? true}
+                onChange={(e) => onUpdateSettings({ dimCoveredCards: e.target.checked })}
                 className="sr-only peer"
               />
               <div className="w-11 h-6 bg-black/40 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>

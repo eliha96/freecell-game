@@ -22,6 +22,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   cardFaceTheme: 'windows95',
   autoPlaySafeCards: true,
   autoCompletePrompt: true,
+  dimCoveredCards: true,
 };
 
 export function loadSavedSettings(): GameSettings {
@@ -34,7 +35,11 @@ export function loadSavedSettings(): GameSettings {
         if (!validThemes.includes(parsed.cardFaceTheme)) {
           parsed.cardFaceTheme = 'windows95';
         }
-        return { ...DEFAULT_SETTINGS, ...parsed };
+        return {
+          ...DEFAULT_SETTINGS,
+          ...parsed,
+          dimCoveredCards: parsed.dimCoveredCards !== undefined ? parsed.dimCoveredCards : true,
+        };
       }
     }
   } catch (e) {

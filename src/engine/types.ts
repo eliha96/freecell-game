@@ -49,6 +49,7 @@ export interface GameSettings {
   cardFaceTheme: CardFaceTheme;
   autoPlaySafeCards: boolean;
   autoCompletePrompt: boolean;
+  dimCoveredCards?: boolean;
 }
 
 export interface GameState {

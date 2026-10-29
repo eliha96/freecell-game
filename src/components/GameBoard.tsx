@@ -656,6 +656,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                     dragState.source.colIndex === colIdx &&
                     cardIdx >= dragState.source.cardIndex!;
 
+                  const isCovered = cardIdx < col.length - 1;
+                  const isDimmed =
+                    !isDealing &&
+                    Boolean(gameState.settings.dimCoveredCards ?? true) &&
+                    isCovered;
+
                   return (
                     <div
                       key={card.id}
@@ -672,6 +678,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                         cardFaceTheme={gameState.settings.cardFaceTheme}
                         isSelected={isSelected}
                         isDragging={isDraggingThis}
+                        isDimmed={isDimmed}
                         onPointerDown={(e) =>
                           handlePointerDown(e, {
                             pile: 'tableau',

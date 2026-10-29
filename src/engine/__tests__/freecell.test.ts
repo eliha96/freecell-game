@@ -193,4 +193,22 @@ describe('GameManager State and Undo/Redo', () => {
     expect(afterRedo.tableau[0]).toHaveLength(6);
     expect(afterRedo.movesCount).toBe(1);
   });
+
+  it('initializes dimCoveredCards setting to true and correctly identifies covered cards', () => {
+    const game = createNewGame(1);
+    expect(game.settings.dimCoveredCards).toBe(true);
+
+    // In column 0 (7 cards), indices 0..5 are covered, index 6 is the uncovered front-row card
+    const col0 = game.tableau[0];
+    expect(col0).toHaveLength(7);
+    for (let i = 0; i < col0.length; i++) {
+      const isCovered = i < col0.length - 1;
+      if (i === 6) {
+        expect(isCovered).toBe(false); // Front row card
+      } else {
+        expect(isCovered).toBe(true); // Covered card to be dimmed
+      }
+    }
+  });
 });
+

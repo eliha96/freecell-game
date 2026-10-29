@@ -65,3 +65,22 @@ html, body, #root {
 * {
   -webkit-tap-highlight-color: transparent;
 }
+
+/* Covered cards dimming for tableau columns */
+.card-dimmed {
+  --card-filter: brightness(0.78) contrast(0.92) saturate(0.85);
+  filter: var(--card-filter);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: filter 200ms ease, box-shadow 200ms ease, transform 150ms ease;
+}
+
+.card-dimmed:hover {
+  --card-filter: brightness(0.88) contrast(0.96) saturate(0.92);
+}
+
+.card-playable-front {
+  --card-filter: brightness(1) contrast(1) saturate(1);
+  filter: var(--card-filter);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  transition: filter 200ms ease, box-shadow 200ms ease, transform 150ms ease;
+}

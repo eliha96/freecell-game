@@ -10,6 +10,7 @@ interface CardViewProps {
   isHighlighted?: boolean;
   isSelected?: boolean;
   isDragging?: boolean;
+  isDimmed?: boolean;
   onClick?: (e: React.MouseEvent) => void;
   onPointerDown?: (e: React.PointerEvent) => void;
   style?: React.CSSProperties;
@@ -37,6 +38,7 @@ export const CardView: React.FC<CardViewProps> = ({
   isHighlighted = false,
   isSelected = false,
   isDragging = false,
+  isDimmed = false,
   onClick,
   onPointerDown,
   style,
@@ -58,8 +60,11 @@ export const CardView: React.FC<CardViewProps> = ({
     );
   }
 
+  const isCardDimmed = Boolean(isDimmed && !isSelected && !isHighlighted && !isDragging);
+  const dimmingClass = isCardDimmed ? 'card-dimmed' : 'card-playable-front';
+
   // Common wrapper styling
-  const wrapperClasses = `relative aspect-[71/96] w-full rounded-sm md:rounded-md shadow-[0_2px_4px_rgba(0,0,0,0.35)] select-none flex items-center justify-center overflow-hidden touch-none transition-all ${
+  const wrapperClasses = `relative aspect-[71/96] w-full rounded-sm md:rounded-md select-none flex items-center justify-center overflow-hidden touch-none transition-all ${dimmingClass} ${
     isHighlighted ? 'ring-3 md:ring-4 ring-amber-400 scale-[1.03] z-30 shadow-xl' : ''
   } ${isSelected ? 'ring-2 md:ring-3 ring-blue-500 scale-[1.02] z-20 shadow-lg' : ''} ${
     isDragging ? 'opacity-25' : 'cursor-grab active:cursor-grabbing hover:brightness-98'
@@ -76,7 +81,7 @@ export const CardView: React.FC<CardViewProps> = ({
         onClick={onClick}
         onPointerDown={onPointerDown}
         style={style}
-        className={`${wrapperClasses} bg-white border border-gray-200/80 shadow-md`}
+        className={`${wrapperClasses} bg-white border border-gray-200/80`}
       >
         <VectorCardFace card={card} theme={cardFaceTheme} />
       </div>
