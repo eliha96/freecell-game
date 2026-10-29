@@ -481,8 +481,16 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   const cardHeight = cardWidth * (96 / 71);
   const availableCascadeHeight = Math.max(220, boardHeight - cardHeight - 30);
   const calculatedOffset = Math.floor(availableCascadeHeight / Math.max(maxColLength - 1, 6));
-  // Allow up to 38px on mobile, ensuring generous visibility of numbers and suits!
-  const verticalOffset = Math.min(38, Math.max(16, calculatedOffset));
+
+  const isAccessibleTheme =
+    gameState.settings.cardFaceTheme === 'large-print' ||
+    gameState.settings.cardFaceTheme === 'modern-bold' ||
+    gameState.settings.cardFaceTheme === 'four-color';
+
+  const minOffset = isAccessibleTheme ? 22 : 16;
+  const maxOffset = isAccessibleTheme ? 42 : 38;
+  // Allow up to 42px on mobile for maximum legibility of large numbers and suits!
+  const verticalOffset = Math.min(maxOffset, Math.max(minOffset, calculatedOffset));
 
   return (
     <div

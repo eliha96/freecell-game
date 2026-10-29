@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Card, CardBackStyle, CardFaceTheme } from '../engine/types';
 import { CardBack } from './CardBack';
+import { VectorCardFace } from './VectorCardFace';
 
 interface CardViewProps {
   card: Card;
@@ -64,7 +65,25 @@ export const CardView: React.FC<CardViewProps> = ({
     isDragging ? 'opacity-25' : 'cursor-grab active:cursor-grabbing hover:brightness-98'
   } ${className}`;
 
-  // 1. Standard Bicycle SVG Deck
+  // 1. Vector Accessible Decks (Large Print, Modern Bold, 4-Color)
+  if (
+    cardFaceTheme === 'large-print' ||
+    cardFaceTheme === 'modern-bold' ||
+    cardFaceTheme === 'four-color'
+  ) {
+    return (
+      <div
+        onClick={onClick}
+        onPointerDown={onPointerDown}
+        style={style}
+        className={`${wrapperClasses} bg-white border border-gray-200/80 shadow-md`}
+      >
+        <VectorCardFace card={card} theme={cardFaceTheme} />
+      </div>
+    );
+  }
+
+  // 2. Standard Bicycle SVG Deck
   if (cardFaceTheme === 'standard') {
     const sChar = SUIT_TO_STANDARD_CHAR[card.suit];
     const fileName = `${card.rank}${sChar}.svg`;

@@ -1,6 +1,6 @@
 import React from 'react';
-import { X, Volume2, VolumeX, Smartphone, Zap } from 'lucide-react';
-import type { GameSettings } from '../engine/types';
+import { X, Volume2, VolumeX, Smartphone, Zap, Palette } from 'lucide-react';
+import type { CardFaceTheme, GameSettings } from '../engine/types';
 import { sounds } from '../engine/sound';
 
 interface SettingsModalProps {
@@ -9,6 +9,59 @@ interface SettingsModalProps {
   onClose: () => void;
   onUpdateSettings: (newSettings: Partial<GameSettings>) => void;
 }
+
+const CARD_FACE_OPTIONS: {
+  id: CardFaceTheme;
+  label: string;
+  desc: string;
+  badge?: string;
+  previewRank: string;
+  previewSuit: string;
+  previewColor: string;
+}[] = [
+  {
+    id: 'large-print',
+    label: 'מספרים ענקיים',
+    desc: 'ספרות ענק וסמל מודגש יחיד במרכז לקריאות מרבית',
+    badge: 'קריאות מרבית ⭐',
+    previewRank: 'A',
+    previewSuit: '♠',
+    previewColor: '#0a0a0a',
+  },
+  {
+    id: 'four-color',
+    label: '4 צבעים נגיש',
+    desc: 'ספרות ענק וצבע מובחן לכל צורה (♥ אדום, ♠ שחור, ♦ כחול, ♣ ירוק)',
+    badge: 'נגישות גבוהה',
+    previewRank: 'K',
+    previewSuit: '♦',
+    previewColor: '#2563eb',
+  },
+  {
+    id: 'modern-bold',
+    label: 'מודרני בולט',
+    desc: 'טיפוגרפיה גדולה ומודרנית בעיצוב חד וברור',
+    previewRank: 'Q',
+    previewSuit: '♥',
+    previewColor: '#e11d48',
+  },
+  {
+    id: 'windows95',
+    label: 'Windows 95',
+    desc: 'הפיקסל-ארט הרטרו המקורי מ-cards.dll',
+    previewRank: '10',
+    previewSuit: '♣',
+    previewColor: '#1a1a1a',
+  },
+  {
+    id: 'standard',
+    label: 'קלאסי תקני (Bicycle)',
+    desc: 'איורים וקטוריים מלאים עם ריבוי סמלים',
+    previewRank: 'J',
+    previewSuit: '♠',
+    previewColor: '#1a1a1a',
+  },
+];
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   settings,
@@ -21,52 +74,60 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
       <div
-        className="w-full max-w-sm sm:max-w-md bg-[#044317] border-2 border-[#16a34a]/60 rounded-xl shadow-2xl p-5 text-white animate-in fade-in zoom-in-95 duration-150"
+        className="w-full max-w-sm sm:max-w-md bg-[#044317] border-2 border-[#16a34a]/60 rounded-xl shadow-2xl p-5 text-white animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col"
         dir="rtl"
       >
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-white/10">
+        <div className="flex items-center justify-between pb-3 border-b border-white/10 shrink-0">
           <h2 className="text-lg sm:text-xl font-bold text-white">הגדרות המשחק</h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition"
+            className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="space-y-5 my-4">
+        <div className="space-y-4 my-3 overflow-y-auto pr-0.5">
           {/* Card Face Theme */}
           <div>
-            <label className="block text-xs font-semibold text-green-200 mb-2">
-              עיצוב חבילת הקלפים:
+            <label className="flex items-center gap-1.5 text-xs font-semibold text-green-200 mb-2">
+              <Palette className="w-4 h-4 text-amber-300" />
+              <span>עיצוב חבילת הקלפים (ערכות נושא):</span>
             </label>
-            <div className="grid grid-cols-2 gap-2.5">
-              <button
-                type="button"
-                onClick={() => onUpdateSettings({ cardFaceTheme: 'windows95' })}
-                className={`flex flex-col items-center justify-center p-3 rounded-lg border text-center transition ${
-                  settings.cardFaceTheme === 'windows95'
-                    ? 'bg-emerald-700/80 border-amber-300 ring-2 ring-amber-300 shadow-md'
-                    : 'bg-black/25 border-white/15 hover:bg-black/40'
-                }`}
-              >
-                <span className="font-bold text-sm text-white">Windows 95</span>
-                <span className="text-[11px] text-green-200/80 mt-0.5">פיקסל-ארט מקורי</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onUpdateSettings({ cardFaceTheme: 'standard' })}
-                className={`flex flex-col items-center justify-center p-3 rounded-lg border text-center transition ${
-                  settings.cardFaceTheme === 'standard'
-                    ? 'bg-emerald-700/80 border-amber-300 ring-2 ring-amber-300 shadow-md'
-                    : 'bg-black/25 border-white/15 hover:bg-black/40'
-                }`}
-              >
-                <span className="font-bold text-sm text-white">קלאסי תקני</span>
-                <span className="text-[11px] text-green-200/80 mt-0.5">וקטורי נקי (Bicycle)</span>
-              </button>
+            <div className="space-y-2">
+              {CARD_FACE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => onUpdateSettings({ cardFaceTheme: opt.id })}
+                  className={`relative w-full flex items-center p-2.5 rounded-xl border text-right transition-all cursor-pointer ${
+                    settings.cardFaceTheme === opt.id
+                      ? 'bg-emerald-700/90 border-amber-300 ring-2 ring-amber-300 shadow-md scale-[1.01]'
+                      : 'bg-black/25 border-white/15 hover:bg-black/40 text-green-100 opacity-80 hover:opacity-100'
+                  }`}
+                >
+                  {opt.badge && (
+                    <span className="absolute -top-1.5 left-3 bg-amber-500 text-gray-950 text-[10px] font-black px-2 py-0.5 rounded-full shadow">
+                      {opt.badge}
+                    </span>
+                  )}
+                  <div className="flex items-center gap-3 w-full">
+                    {/* Mini preview card */}
+                    <div
+                      className="w-8 h-11 bg-white rounded shadow-sm border border-gray-300 flex flex-col items-center justify-between p-0.5 shrink-0 select-none"
+                      style={{ color: opt.previewColor }}
+                    >
+                      <span className="font-black text-[11px] leading-none">{opt.previewRank}</span>
+                      <span className="text-[12px] leading-none">{opt.previewSuit}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-bold text-white leading-tight">{opt.label}</div>
+                      <div className="text-[11px] text-green-200/80 mt-0.5 leading-snug">{opt.desc}</div>
+                    </div>
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
 

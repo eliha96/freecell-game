@@ -30,7 +30,8 @@ export function loadSavedSettings(): GameSettings {
       const raw = localStorage.getItem(SETTINGS_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (parsed.cardFaceTheme !== 'windows95' && parsed.cardFaceTheme !== 'standard') {
+        const validThemes = ['windows95', 'standard', 'large-print', 'modern-bold', 'four-color'];
+        if (!validThemes.includes(parsed.cardFaceTheme)) {
           parsed.cardFaceTheme = 'windows95';
         }
         return { ...DEFAULT_SETTINGS, ...parsed };
