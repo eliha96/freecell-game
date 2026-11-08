@@ -1,4 +1,4 @@
-import type { Card, GameState, Rank, Suit } from './types';
+import type { Card, CardDimmingMode, GameState, Rank, Suit } from './types';
 
 export const SUITS: Suit[] = ['clubs', 'diamonds', 'hearts', 'spades'];
 
@@ -181,3 +181,60 @@ export function canAutoComplete(state: GameState): boolean {
 
   return true;
 }
+
+/**
+ * Calculates the start index of the valid alternating-color descending sequence
+ * ending at the bottom (exposed end) of a tableau column.
+ */
+export function getTableauSequenceStartIndex(col: Card[]): number {
+  if (col.length <= 1) return 0;
+  let start = col.length - 1;
+  while (start > 0) {
+    const prev = col[start - 1];
+    const curr = col[start];
+    if (prev.color !== curr.color && prev.rank === curr.rank + 1) {
+      start--;
+    } else {
+      break;
+    }
+  }
+  return start;
+}
+
+/**
+ * Determines whether a card at cardIdx in a tableau column should be dimmed.
+ *
+ * @param col The tableau column cards
+ * @param cardIdx Index of the card within this column
+ * @param mode 'none' | 'sequences' | 'movable'
+ * @param emptyFreeCells Number of currently empty FreeCells
+ * @param emptyColumns Number of currently empty Tableau columns
+ */
+export function isCardDimmedInTableau(
+  col: Card[],
+  cardIdx: number,
+  mode: CardDimmingMode,
+  emptyFreeCells: number,
+  emptyColumns: number
+): boolean {
+  if (mode === 'none') return false;
+  if (col.length === 0 || cardIdx >= col.length) return false;
+
+  const seqStart = getTableauSequenceStartIndex(col);
+
+  // Mode: 'sequences' - illuminate all cards in the valid sequence from the bottom
+  if (mode === 'sequences') {
+    return cardIdx < seqStart;
+  }
+
+  // Mode: 'movable' - illuminate only cards that can actually be moved together right now
+  if (mode === 'movable') {
+    const maxMovable = maxCardsMovable(emptyFreeCells, emptyColumns, false);
+    const movableCount = Math.min(col.length - seqStart, maxMovable);
+    const movableStart = col.length - movableCount;
+    return cardIdx < movableStart;
+  }
+
+  return false;
+}
+

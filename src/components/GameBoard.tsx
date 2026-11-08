@@ -8,6 +8,7 @@ import {
   isValidTableauSequence,
   maxCardsMovable,
   canAutoComplete,
+  isCardDimmedInTableau,
 } from '../engine/rules';
 import {
   findBestMoveForTappedCard,
@@ -620,47 +621,50 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         ref={tableauContainerRef}
         className="w-full flex-1 grid grid-cols-8 gap-1 sm:gap-1.5 items-start overflow-visible min-h-0"
       >
-        {gameState.tableau.map((col, colIdx) => {
-          const isEmpty = col.length === 0;
+        {(() => {
+          const emptyCells = getEmptyFreeCellCount(gameState.freeCells);
+          const emptyCols = getEmptyTableauColumnCount(gameState.tableau);
+          const dimMode = gameState.settings.cardDimmingMode ?? 'sequences';
 
-          return (
-            <div
-              key={`col-${colIdx}`}
-              ref={(el) => {
-                tableauRefs.current[colIdx] = el;
-              }}
-              onClick={() => {
-                if (isEmpty) handleEmptySpotTap({ type: 'tableau', index: colIdx });
-              }}
-              className="relative w-full h-full min-h-[220px] rounded-sm md:rounded-md transition"
-            >
-              {isEmpty ? (
-                <div className="relative aspect-[71/96] w-full rounded-sm md:rounded-md card-slot flex items-center justify-center cursor-pointer hover:bg-white/5">
-                  <span className="text-white/15 font-bold text-xs select-none">↓</span>
-                </div>
-              ) : (
-                col.map((card, cardIdx) => {
-                  const dealOrder = cardIdx * 8 + colIdx;
-                  if (isDealing && dealOrder >= dealtCardsCount) {
-                    return null;
-                  }
+          return gameState.tableau.map((col, colIdx) => {
+            const isEmpty = col.length === 0;
 
-                  const isSelected =
-                    selectedLocation?.pile === 'tableau' &&
-                    selectedLocation.colIndex === colIdx &&
-                    cardIdx >= selectedLocation.cardIndex;
+            return (
+              <div
+                key={`col-${colIdx}`}
+                ref={(el) => {
+                  tableauRefs.current[colIdx] = el;
+                }}
+                onClick={() => {
+                  if (isEmpty) handleEmptySpotTap({ type: 'tableau', index: colIdx });
+                }}
+                className="relative w-full h-full min-h-[220px] rounded-sm md:rounded-md transition"
+              >
+                {isEmpty ? (
+                  <div className="relative aspect-[71/96] w-full rounded-sm md:rounded-md card-slot flex items-center justify-center cursor-pointer hover:bg-white/5">
+                    <span className="text-white/15 font-bold text-xs select-none">↓</span>
+                  </div>
+                ) : (
+                  col.map((card, cardIdx) => {
+                    const dealOrder = cardIdx * 8 + colIdx;
+                    if (isDealing && dealOrder >= dealtCardsCount) {
+                      return null;
+                    }
 
-                  const isDraggingThis =
-                    dragState?.hasMoved &&
-                    dragState.source.pile === 'tableau' &&
-                    dragState.source.colIndex === colIdx &&
-                    cardIdx >= dragState.source.cardIndex!;
+                    const isSelected =
+                      selectedLocation?.pile === 'tableau' &&
+                      selectedLocation.colIndex === colIdx &&
+                      cardIdx >= selectedLocation.cardIndex;
 
-                  const isCovered = cardIdx < col.length - 1;
-                  const isDimmed =
-                    !isDealing &&
-                    Boolean(gameState.settings.dimCoveredCards ?? true) &&
-                    isCovered;
+                    const isDraggingThis =
+                      dragState?.hasMoved &&
+                      dragState.source.pile === 'tableau' &&
+                      dragState.source.colIndex === colIdx &&
+                      cardIdx >= dragState.source.cardIndex!;
+
+                    const isDimmed =
+                      !isDealing &&
+                      isCardDimmedInTableau(col, cardIdx, dimMode, emptyCells, emptyCols);
 
                   return (
                     <div
@@ -693,7 +697,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
               )}
             </div>
           );
-        })}
+        });
+      })()}
       </div>
 
       {/* Floating Dragged Cards Overlay */}

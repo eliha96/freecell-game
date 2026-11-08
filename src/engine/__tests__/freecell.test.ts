@@ -5,6 +5,8 @@ import {
   canPlaceOnFoundation,
   maxCardsMovable,
   isSafeAutoMoveToFoundation,
+  getTableauSequenceStartIndex,
+  isCardDimmedInTableau,
 } from '../rules';
 import { createNewGame, executeMove, undoMove, redoMove } from '../gameManager';
 import type { Card } from '../types';
@@ -194,21 +196,64 @@ describe('GameManager State and Undo/Redo', () => {
     expect(afterRedo.movesCount).toBe(1);
   });
 
-  it('initializes dimCoveredCards setting to true and correctly identifies covered cards', () => {
+  it('initializes cardDimmingMode setting to sequences by default', () => {
     const game = createNewGame(1);
-    expect(game.settings.dimCoveredCards).toBe(true);
+    expect(game.settings.cardDimmingMode).toBe('sequences');
+  });
 
-    // In column 0 (7 cards), indices 0..5 are covered, index 6 is the uncovered front-row card
-    const col0 = game.tableau[0];
-    expect(col0).toHaveLength(7);
-    for (let i = 0; i < col0.length; i++) {
-      const isCovered = i < col0.length - 1;
-      if (i === 6) {
-        expect(isCovered).toBe(false); // Front row card
-      } else {
-        expect(isCovered).toBe(true); // Covered card to be dimmed
-      }
-    }
+  it('calculates tableau sequence start index correctly', () => {
+    const kSpades: Card = { id: 'k-s', suit: 'spades', rank: 13, color: 'black', isFaceUp: true };
+    const nineHearts: Card = { id: '9-h', suit: 'hearts', rank: 9, color: 'red', isFaceUp: true };
+    const eightSpades: Card = { id: '8-s', suit: 'spades', rank: 8, color: 'black', isFaceUp: true };
+    const sevenDiamonds: Card = { id: '7-d', suit: 'diamonds', rank: 7, color: 'red', isFaceUp: true };
+
+    // Column with broken order at index 0: [K♠, 9♥, 8♠, 7♦]
+    // 7♦ -> 8♠ -> 9♥ form a valid sequence (len 3, start idx 1). K♠ does not connect to 9♥.
+    const col: Card[] = [kSpades, nineHearts, eightSpades, sevenDiamonds];
+    expect(getTableauSequenceStartIndex(col)).toBe(1);
+
+    // Completely ordered column
+    const orderedCol: Card[] = [nineHearts, eightSpades, sevenDiamonds];
+    expect(getTableauSequenceStartIndex(orderedCol)).toBe(0);
+
+    // Single card column
+    expect(getTableauSequenceStartIndex([kSpades])).toBe(0);
+  });
+
+  it('evaluates isCardDimmedInTableau for all 3 dimming modes', () => {
+    const kSpades: Card = { id: 'k-s', suit: 'spades', rank: 13, color: 'black', isFaceUp: true };
+    const nineHearts: Card = { id: '9-h', suit: 'hearts', rank: 9, color: 'red', isFaceUp: true };
+    const eightSpades: Card = { id: '8-s', suit: 'spades', rank: 8, color: 'black', isFaceUp: true };
+    const sevenDiamonds: Card = { id: '7-d', suit: 'diamonds', rank: 7, color: 'red', isFaceUp: true };
+    const col: Card[] = [kSpades, nineHearts, eightSpades, sevenDiamonds];
+
+    // 1. Mode: 'none' -> never dimmed
+    expect(isCardDimmedInTableau(col, 0, 'none', 0, 0)).toBe(false);
+    expect(isCardDimmedInTableau(col, 1, 'none', 0, 0)).toBe(false);
+    expect(isCardDimmedInTableau(col, 2, 'none', 0, 0)).toBe(false);
+    expect(isCardDimmedInTableau(col, 3, 'none', 0, 0)).toBe(false);
+
+    // 2. Mode: 'sequences' -> all cards in the valid sequence (indices 1..3) are bright, K♠ is dimmed
+    expect(isCardDimmedInTableau(col, 0, 'sequences', 0, 0)).toBe(true);  // K♠ dimmed
+    expect(isCardDimmedInTableau(col, 1, 'sequences', 0, 0)).toBe(false); // 9♥ bright
+    expect(isCardDimmedInTableau(col, 2, 'sequences', 0, 0)).toBe(false); // 8♠ bright
+    expect(isCardDimmedInTableau(col, 3, 'sequences', 0, 0)).toBe(false); // 7♦ bright
+
+    // 3. Mode: 'movable'
+    // With 0 empty freecells and 0 empty columns: maxMovable = 1.
+    // Only index 3 (7♦) is bright; indices 0, 1, 2 are dimmed!
+    expect(isCardDimmedInTableau(col, 0, 'movable', 0, 0)).toBe(true);  // K♠ dimmed
+    expect(isCardDimmedInTableau(col, 1, 'movable', 0, 0)).toBe(true);  // 9♥ dimmed
+    expect(isCardDimmedInTableau(col, 2, 'movable', 0, 0)).toBe(true);  // 8♠ dimmed
+    expect(isCardDimmedInTableau(col, 3, 'movable', 0, 0)).toBe(false); // 7♦ bright (single card movable)
+
+    // With 2 empty freecells and 0 empty columns: maxMovable = 3.
+    // Can move 3 cards together! Indices 1, 2, 3 (9♥, 8♠, 7♦) light up bright!
+    expect(isCardDimmedInTableau(col, 0, 'movable', 2, 0)).toBe(true);  // K♠ still dimmed (broken sequence)
+    expect(isCardDimmedInTableau(col, 1, 'movable', 2, 0)).toBe(false); // 9♥ bright
+    expect(isCardDimmedInTableau(col, 2, 'movable', 2, 0)).toBe(false); // 8♠ bright
+    expect(isCardDimmedInTableau(col, 3, 'movable', 2, 0)).toBe(false); // 7♦ bright
   });
 });
+
 

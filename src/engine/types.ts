@@ -42,6 +42,8 @@ export interface MoveRecord {
   };
 }
 
+export type CardDimmingMode = 'none' | 'sequences' | 'movable';
+
 export interface GameSettings {
   soundEnabled: boolean;
   hapticsEnabled: boolean;
@@ -49,6 +51,7 @@ export interface GameSettings {
   cardFaceTheme: CardFaceTheme;
   autoPlaySafeCards: boolean;
   autoCompletePrompt: boolean;
+  cardDimmingMode: CardDimmingMode;
   dimCoveredCards?: boolean;
 }
 

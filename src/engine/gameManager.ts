@@ -1,4 +1,4 @@
-import type { Card, GameSettings, GameState, MoveRecord } from './types';
+import type { Card, CardDimmingMode, GameSettings, GameState, MoveRecord } from './types';
 import { generateMicrosoftDeal, getRandomDealNumber } from './dealGenerator';
 import {
   canPlaceOnFoundation,
@@ -22,6 +22,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   cardFaceTheme: 'windows95',
   autoPlaySafeCards: true,
   autoCompletePrompt: true,
+  cardDimmingMode: 'sequences',
   dimCoveredCards: true,
 };
 
@@ -35,10 +36,19 @@ export function loadSavedSettings(): GameSettings {
         if (!validThemes.includes(parsed.cardFaceTheme)) {
           parsed.cardFaceTheme = 'windows95';
         }
+
+        const validDimModes: CardDimmingMode[] = ['none', 'sequences', 'movable'];
+        let dimMode: CardDimmingMode = 'sequences';
+        if (parsed.cardDimmingMode && validDimModes.includes(parsed.cardDimmingMode)) {
+          dimMode = parsed.cardDimmingMode;
+        } else if (parsed.dimCoveredCards === false) {
+          dimMode = 'none';
+        }
+
         return {
           ...DEFAULT_SETTINGS,
           ...parsed,
-          dimCoveredCards: parsed.dimCoveredCards !== undefined ? parsed.dimCoveredCards : true,
+          cardDimmingMode: dimMode,
         };
       }
     }

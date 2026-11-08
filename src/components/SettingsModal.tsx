@@ -1,6 +1,6 @@
 import React from 'react';
 import { X, Volume2, VolumeX, Smartphone, Zap, Palette, Eye } from 'lucide-react';
-import type { CardFaceTheme, GameSettings } from '../engine/types';
+import type { CardDimmingMode, CardFaceTheme, GameSettings } from '../engine/types';
 import { sounds } from '../engine/sound';
 
 interface SettingsModalProps {
@@ -9,6 +9,31 @@ interface SettingsModalProps {
   onClose: () => void;
   onUpdateSettings: (newSettings: Partial<GameSettings>) => void;
 }
+
+const CARD_DIMMING_OPTIONS: {
+  id: CardDimmingMode;
+  label: string;
+  desc: string;
+  badge?: string;
+}[] = [
+  {
+    id: 'sequences',
+    label: 'הדגשת רצפים מסודרים',
+    desc: 'מאיר את כל הקלפים המסודרים בסדר יורד ובצבעים מתחלפים בתחתית הטור',
+    badge: 'מומלץ ⭐',
+  },
+  {
+    id: 'movable',
+    label: 'הזזה אפשרית כעת',
+    desc: 'מאיר רק קלפים שניתן להזיז יחד ברגע זה (מותנה בתאים וטורים פנויים)',
+    badge: 'דינמי ⚡',
+  },
+  {
+    id: 'none',
+    label: 'ללא עמעום (קלאסי)',
+    desc: 'כל הקלפים בלוח מוצגים בבהירות מלאה ללא החשכה',
+  },
+];
 
 const CARD_FACE_OPTIONS: {
   id: CardFaceTheme;
@@ -153,26 +178,44 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </label>
           </div>
 
-          {/* Dim Covered Cards Toggle */}
-          <div className="flex items-center justify-between p-3 rounded-lg bg-black/20 border border-white/10">
-            <div className="flex items-start gap-2.5">
-              <Eye className="w-5 h-5 text-cyan-300 shrink-0 mt-0.5" />
-              <div>
-                <div className="font-semibold text-sm">הדגשת השורה הפתוחה למשחק</div>
-                <div className="text-[11px] text-green-200/75 mt-0.5 leading-snug">
-                  משאיר את שורת הקלפים הפתוחה בצבע מלא ומחשיך מעט קלפים מכוסים בטורים
-                </div>
-              </div>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer shrink-0 mr-3">
-              <input
-                type="checkbox"
-                checked={settings.dimCoveredCards ?? true}
-                onChange={(e) => onUpdateSettings({ dimCoveredCards: e.target.checked })}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-black/40 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+          {/* Card Dimming Mode */}
+          <div>
+            <label className="flex items-center gap-1.5 text-xs font-semibold text-green-200 mb-2">
+              <Eye className="w-4 h-4 text-cyan-300" />
+              <span>הדגשת קלפים בטורים (עמעום קלפים מכוסים):</span>
             </label>
+            <div className="space-y-1.5">
+              {CARD_DIMMING_OPTIONS.map((opt) => {
+                const isSelected = (settings.cardDimmingMode ?? 'sequences') === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() =>
+                      onUpdateSettings({
+                        cardDimmingMode: opt.id,
+                        dimCoveredCards: opt.id !== 'none',
+                      })
+                    }
+                    className={`relative w-full flex items-center p-2.5 rounded-xl border text-right transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-emerald-700/90 border-cyan-300 ring-2 ring-cyan-300/80 shadow-md scale-[1.01]'
+                        : 'bg-black/25 border-white/15 hover:bg-black/40 text-green-100 opacity-80 hover:opacity-100'
+                    }`}
+                  >
+                    {opt.badge && (
+                      <span className="absolute -top-1.5 left-3 bg-cyan-400 text-gray-950 text-[10px] font-black px-2 py-0.5 rounded-full shadow">
+                        {opt.badge}
+                      </span>
+                    )}
+                    <div className="flex-1 min-w-0 pr-1">
+                      <div className="text-sm font-bold text-white leading-tight">{opt.label}</div>
+                      <div className="text-[11px] text-green-200/80 mt-0.5 leading-snug">{opt.desc}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Sound Toggle */}
