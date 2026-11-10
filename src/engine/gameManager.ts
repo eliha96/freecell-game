@@ -1,5 +1,5 @@
-import type { Card, CardDimmingMode, GameSettings, GameState, MoveRecord } from './types';
-import { generateMicrosoftDeal, getRandomDealNumber } from './dealGenerator';
+import type { Card, CardDimmingMode, DifficultyLevel, GameSettings, GameState, MoveRecord } from './types';
+import { generateMicrosoftDeal } from './dealGenerator';
 import {
   canPlaceOnFoundation,
   canPlaceOnFreeCell,
@@ -11,6 +11,7 @@ import {
 } from './rules';
 import type { MoveDestination } from './solver';
 import { getEmptyFreeCellCount, getEmptyTableauColumnCount } from './solver';
+import { getDealDifficulty, getRandomDealByDifficulty } from './difficulty';
 
 const STORAGE_KEY = 'freecell_classic_saved_game_v1';
 const SETTINGS_KEY = 'freecell_classic_settings_v1';
@@ -23,6 +24,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   autoPlaySafeCards: true,
   autoCompletePrompt: true,
   cardDimmingMode: 'sequences',
+  preferredDifficulty: 'all',
   dimCoveredCards: true,
 };
 
@@ -45,10 +47,16 @@ export function loadSavedSettings(): GameSettings {
           dimMode = 'none';
         }
 
+        const validDifficulties: (DifficultyLevel | 'all')[] = ['all', 'easy', 'medium', 'hard'];
+        const prefDiff = validDifficulties.includes(parsed.preferredDifficulty)
+          ? parsed.preferredDifficulty
+          : 'all';
+
         return {
           ...DEFAULT_SETTINGS,
           ...parsed,
           cardDimmingMode: dimMode,
+          preferredDifficulty: prefDiff,
         };
       }
     }
@@ -79,19 +87,25 @@ function snapshotPiles(state: GameState): MoveRecord['previousState'] {
 
 export function createNewGame(
   dealNumber?: number,
-  customSettings?: Partial<GameSettings>
+  customSettings?: Partial<GameSettings>,
+  difficultyPreference?: DifficultyLevel | 'all'
 ): GameState {
-  const chosenDealNumber = dealNumber ?? getRandomDealNumber();
   const settings: GameSettings = {
     ...DEFAULT_SETTINGS,
     ...loadSavedSettings(),
     ...(customSettings || {}),
   };
 
+  const pref = difficultyPreference ?? settings.preferredDifficulty ?? 'all';
+  const chosenDealNumber =
+    dealNumber !== undefined ? dealNumber : getRandomDealByDifficulty(pref);
+  const difficulty = getDealDifficulty(chosenDealNumber);
+
   const initialTableau = generateMicrosoftDeal(chosenDealNumber);
 
   const gameState: GameState = {
     dealNumber: chosenDealNumber,
+    difficulty,
     freeCells: [null, null, null, null],
     foundations: [[], [], [], []],
     tableau: initialTableau,
@@ -387,7 +401,11 @@ export function loadSavedGameState(): GameState | null {
     if (typeof localStorage !== 'undefined') {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        return JSON.parse(raw);
+        const state = JSON.parse(raw);
+        if (!state.difficulty && state.dealNumber) {
+          state.difficulty = getDealDifficulty(state.dealNumber);
+        }
+        return state;
       }
     }
   } catch (e) {

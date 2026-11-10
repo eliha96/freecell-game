@@ -235,6 +235,7 @@ export function App() {
       {/* Top Slim HUD Bar */}
       <HeaderBar
         dealNumber={gameState.dealNumber}
+        difficulty={gameState.difficulty}
         movesCount={gameState.movesCount}
         elapsedSeconds={gameState.elapsedSeconds}
         onOpenSelectDeal={() => setIsSelectDealOpen(true)}

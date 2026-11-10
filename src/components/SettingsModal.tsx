@@ -1,6 +1,6 @@
 import React from 'react';
-import { X, Volume2, VolumeX, Smartphone, Zap, Palette, Eye } from 'lucide-react';
-import type { CardDimmingMode, CardFaceTheme, GameSettings } from '../engine/types';
+import { X, Volume2, VolumeX, Smartphone, Zap, Palette, Eye, Sparkles } from 'lucide-react';
+import type { CardDimmingMode, CardFaceTheme, DifficultyLevel, GameSettings } from '../engine/types';
 import { sounds } from '../engine/sound';
 
 interface SettingsModalProps {
@@ -9,6 +9,33 @@ interface SettingsModalProps {
   onClose: () => void;
   onUpdateSettings: (newSettings: Partial<GameSettings>) => void;
 }
+
+const PREFERRED_DIFFICULTY_OPTIONS: {
+  id: DifficultyLevel | 'all';
+  label: string;
+  badge: string;
+}[] = [
+  {
+    id: 'all',
+    label: 'אקראי (הכל)',
+    badge: '🎲',
+  },
+  {
+    id: 'easy',
+    label: 'קל',
+    badge: '🟢',
+  },
+  {
+    id: 'medium',
+    label: 'בינוני',
+    badge: '🟡',
+  },
+  {
+    id: 'hard',
+    label: 'קשה',
+    badge: '🔴',
+  },
+];
 
 const CARD_DIMMING_OPTIONS: {
   id: CardDimmingMode;
@@ -212,6 +239,34 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <div className="text-sm font-bold text-white leading-tight">{opt.label}</div>
                       <div className="text-[11px] text-green-200/80 mt-0.5 leading-snug">{opt.desc}</div>
                     </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Preferred Difficulty */}
+          <div>
+            <label className="flex items-center gap-1.5 text-xs font-semibold text-green-200 mb-2">
+              <Sparkles className="w-4 h-4 text-amber-300" />
+              <span>רמת קושי ברירת מחדל (למשחק חדש):</span>
+            </label>
+            <div className="grid grid-cols-4 gap-1.5">
+              {PREFERRED_DIFFICULTY_OPTIONS.map((opt) => {
+                const isSelected = (settings.preferredDifficulty ?? 'all') === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => onUpdateSettings({ preferredDifficulty: opt.id })}
+                    className={`flex flex-col items-center justify-center p-2 rounded-xl border text-center transition cursor-pointer ${
+                      isSelected
+                        ? 'bg-emerald-700/90 border-amber-300 ring-2 ring-amber-300/80 shadow-md font-bold'
+                        : 'bg-black/25 border-white/15 hover:bg-black/40 text-green-100 opacity-80 hover:opacity-100'
+                    }`}
+                  >
+                    <span className="text-sm">{opt.badge}</span>
+                    <span className="text-[11px] text-white mt-0.5">{opt.label}</span>
                   </button>
                 );
               })}

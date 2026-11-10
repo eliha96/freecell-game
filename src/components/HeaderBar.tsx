@@ -1,8 +1,11 @@
 import React from 'react';
 import { Hash, Clock, Footprints } from 'lucide-react';
+import type { DifficultyLevel } from '../engine/types';
+import { DIFFICULTY_CONFIG } from '../engine/difficulty';
 
 interface HeaderBarProps {
   dealNumber: number;
+  difficulty?: DifficultyLevel;
   movesCount: number;
   elapsedSeconds: number;
   onOpenSelectDeal: () => void;
@@ -16,20 +19,30 @@ function formatTime(totalSeconds: number): string {
 
 export const HeaderBar: React.FC<HeaderBarProps> = ({
   dealNumber,
+  difficulty = 'medium',
   movesCount,
   elapsedSeconds,
   onOpenSelectDeal,
 }) => {
+  const diffInfo = DIFFICULTY_CONFIG[difficulty];
+
   return (
     <header className="w-full bg-[#044317]/95 border-b border-[#0f8b3c]/40 text-white px-2.5 sm:px-4 py-1.5 sm:py-2 flex items-center justify-between shadow-md select-none shrink-0 z-40 pt-safe">
-      {/* Deal Number Selector Button */}
+      {/* Deal Number Selector Button with Difficulty Badge */}
       <button
         onClick={onOpenSelectDeal}
-        className="flex items-center gap-1.5 bg-[#076324] hover:bg-[#0a7a2e] active:scale-95 px-2.5 py-1 rounded-lg border border-white/20 text-xs sm:text-sm font-bold tracking-wide shadow transition"
-        title="בחר מספר משחק (1 עד 32,000)"
+        className="flex items-center gap-1.5 bg-[#076324] hover:bg-[#0a7a2e] active:scale-95 px-2.5 py-1 rounded-lg border border-white/20 text-xs sm:text-sm font-bold tracking-wide shadow transition cursor-pointer"
+        title="בחר מספר משחק או רמת קושי"
       >
         <Hash className="w-3.5 h-3.5 text-amber-300 shrink-0" />
         <span>משחק #{dealNumber}</span>
+        {diffInfo && (
+          <span
+            className={`text-[10px] sm:text-xs font-semibold px-1.5 py-0.5 rounded border ${diffInfo.bgClass} ${diffInfo.colorClass} ${diffInfo.borderClass} mr-1`}
+          >
+            {diffInfo.badge}
+          </span>
+        )}
       </button>
 
       {/* Stats HUD: Timer & Moves */}

@@ -43,6 +43,7 @@ export interface MoveRecord {
 }
 
 export type CardDimmingMode = 'none' | 'sequences' | 'movable';
+export type DifficultyLevel = 'easy' | 'medium' | 'hard';
 
 export interface GameSettings {
   soundEnabled: boolean;
@@ -52,11 +53,13 @@ export interface GameSettings {
   autoPlaySafeCards: boolean;
   autoCompletePrompt: boolean;
   cardDimmingMode: CardDimmingMode;
+  preferredDifficulty?: DifficultyLevel | 'all';
   dimCoveredCards?: boolean;
 }
 
 export interface GameState {
   dealNumber: number;
+  difficulty: DifficultyLevel;
   freeCells: [Card | null, Card | null, Card | null, Card | null];
   foundations: [Card[], Card[], Card[], Card[]];
   tableau: [Card[], Card[], Card[], Card[], Card[], Card[], Card[], Card[]];

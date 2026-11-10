@@ -9,7 +9,12 @@ import {
   isCardDimmedInTableau,
 } from '../rules';
 import { createNewGame, executeMove, undoMove, redoMove } from '../gameManager';
-import type { Card } from '../types';
+import {
+  getDealDifficulty,
+  getRandomDealByDifficulty,
+  DIFFICULTY_CONFIG,
+} from '../difficulty';
+import type { Card, DifficultyLevel } from '../types';
 
 describe('Microsoft FreeCell Deal Generator', () => {
   it('generates 52 cards across 8 columns for Deal #1', () => {
@@ -255,5 +260,67 @@ describe('GameManager State and Undo/Redo', () => {
     expect(isCardDimmedInTableau(col, 3, 'movable', 2, 0)).toBe(false); // 7♦ bright
   });
 });
+
+describe('FreeCell Difficulty Classification & Generation', () => {
+  it('correctly classifies known classic deals', () => {
+    // Famous Easy deals
+    expect(getDealDifficulty(164)).toBe('easy');
+    expect(getDealDifficulty(1941)).toBe('easy');
+    expect(getDealDifficulty(7058)).toBe('easy');
+
+    // Famous Hard / Unsolvable deals
+    expect(getDealDifficulty(617)).toBe('hard');
+    expect(getDealDifficulty(11982)).toBe('hard');
+    expect(getDealDifficulty(169)).toBe('hard');
+
+    // Deal #1 is medium
+    expect(getDealDifficulty(1)).toBe('medium');
+  });
+
+  it('generates random deals strictly adhering to the requested difficulty level', () => {
+    for (let i = 0; i < 5; i++) {
+      const easyDeal = getRandomDealByDifficulty('easy');
+      expect(easyDeal).toBeGreaterThanOrEqual(1);
+      expect(easyDeal).toBeLessThanOrEqual(32000);
+      expect(getDealDifficulty(easyDeal)).toBe('easy');
+
+      const hardDeal = getRandomDealByDifficulty('hard');
+      expect(hardDeal).toBeGreaterThanOrEqual(1);
+      expect(hardDeal).toBeLessThanOrEqual(32000);
+      expect(getDealDifficulty(hardDeal)).toBe('hard');
+
+      const mediumDeal = getRandomDealByDifficulty('medium');
+      expect(mediumDeal).toBeGreaterThanOrEqual(1);
+      expect(mediumDeal).toBeLessThanOrEqual(32000);
+      expect(getDealDifficulty(mediumDeal)).toBe('medium');
+    }
+  });
+
+  it('initializes game state with the correct difficulty level', () => {
+    const easyGame = createNewGame(164);
+    expect(easyGame.dealNumber).toBe(164);
+    expect(easyGame.difficulty).toBe('easy');
+
+    const hardGame = createNewGame(617);
+    expect(hardGame.dealNumber).toBe(617);
+    expect(hardGame.difficulty).toBe('hard');
+
+    const autoEasyGame = createNewGame(undefined, undefined, 'easy');
+    expect(autoEasyGame.difficulty).toBe('easy');
+  });
+
+  it('contains full visual metadata for each difficulty in DIFFICULTY_CONFIG', () => {
+    const levels: DifficultyLevel[] = ['easy', 'medium', 'hard'];
+    for (const lvl of levels) {
+      const config = DIFFICULTY_CONFIG[lvl];
+      expect(config.label).toBeTruthy();
+      expect(config.badge).toBeTruthy();
+      expect(config.colorClass).toBeTruthy();
+      expect(config.bgClass).toBeTruthy();
+      expect(config.description).toBeTruthy();
+    }
+  });
+});
+
 
 
