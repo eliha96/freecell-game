@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { GameSettings, GameState } from './engine/types';
+import type { DifficultyLevel, GameSettings, GameState } from './engine/types';
 import {
   createNewGame,
   executeMove,
@@ -9,6 +9,7 @@ import {
   undoMove,
 } from './engine/gameManager';
 import { canPlaceOnFoundation, isGameWon } from './engine/rules';
+import { calculateFreeCellScore } from './engine/leaderboard';
 import { sounds } from './engine/sound';
 import { HeaderBar } from './components/HeaderBar';
 import { BottomBar } from './components/BottomBar';
@@ -93,22 +94,46 @@ export function App() {
     });
   }, []);
 
-  // New Game
+  // New Game - draws a new random deal matching the current/active difficulty
   const handleNewGame = useCallback(() => {
     if (autoCompleteTimerRef.current) {
       clearInterval(autoCompleteTimerRef.current);
     }
-    setGameState(createNewGame(undefined, gameState.settings));
+    const currentDiff =
+      gameState.settings.preferredDifficulty &&
+      gameState.settings.preferredDifficulty !== 'all'
+        ? gameState.settings.preferredDifficulty
+        : gameState.difficulty;
+    const newGame = createNewGame(undefined, gameState.settings, currentDiff);
+    const updatedSettings: GameSettings = {
+      ...gameState.settings,
+      preferredDifficulty: currentDiff,
+    };
+    saveSettings(updatedSettings);
+    setGameState({
+      ...newGame,
+      settings: updatedSettings,
+    });
     setDealTrigger((prev) => prev + 1);
-  }, [gameState.settings]);
+  }, [gameState.difficulty, gameState.settings]);
 
   // Choose Deal
   const handleSelectDeal = useCallback(
-    (dealNum: number) => {
+    (dealNum: number, diff?: DifficultyLevel | 'all') => {
       if (autoCompleteTimerRef.current) {
         clearInterval(autoCompleteTimerRef.current);
       }
-      setGameState(createNewGame(dealNum, gameState.settings));
+      const newGame = createNewGame(dealNum, gameState.settings, diff);
+      const chosenDiff = diff && diff !== 'all' ? diff : newGame.difficulty;
+      const updatedSettings: GameSettings = {
+        ...gameState.settings,
+        preferredDifficulty: chosenDiff,
+      };
+      saveSettings(updatedSettings);
+      setGameState({
+        ...newGame,
+        settings: updatedSettings,
+      });
       setDealTrigger((prev) => prev + 1);
     },
     [gameState.settings]
@@ -230,6 +255,8 @@ export function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleUndo, handleRedo, handleNewGame]);
 
+  const currentScore = calculateFreeCellScore(gameState.elapsedSeconds, gameState.movesCount);
+
   return (
     <div className="flex flex-col h-screen h-[100dvh] w-screen overflow-hidden green-felt text-white select-none">
       {/* Top Slim HUD Bar */}
@@ -238,6 +265,7 @@ export function App() {
         difficulty={gameState.difficulty}
         movesCount={gameState.movesCount}
         elapsedSeconds={gameState.elapsedSeconds}
+        score={currentScore}
         onOpenSelectDeal={() => setIsSelectDealOpen(true)}
       />
 
@@ -256,6 +284,7 @@ export function App() {
         onUndo={handleUndo}
         onRedo={handleRedo}
         onNewGame={handleNewGame}
+        onRestart={handleReplayDeal}
         onOpenLeaderboard={() => setShowLeaderboard(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
       />

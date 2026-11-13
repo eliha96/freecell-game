@@ -11,7 +11,7 @@ interface SelectDealModalProps {
   currentDeal: number;
   isOpen: boolean;
   onClose: () => void;
-  onSelectDeal: (dealNumber: number) => void;
+  onSelectDeal: (dealNumber: number, difficulty?: DifficultyLevel | 'all') => void;
 }
 
 export const SelectDealModal: React.FC<SelectDealModalProps> = ({
@@ -37,18 +37,18 @@ export const SelectDealModal: React.FC<SelectDealModalProps> = ({
       return;
     }
     setErrorMsg(null);
-    onSelectDeal(parsedNum);
+    onSelectDeal(parsedNum, liveDifficulty ?? undefined);
     onClose();
   };
 
   const handleDifficultySelect = (diff: DifficultyLevel | 'all') => {
     const chosen = getRandomDealByDifficulty(diff);
-    onSelectDeal(chosen);
+    onSelectDeal(chosen, diff);
     onClose();
   };
 
   const handlePreset = (num: number) => {
-    onSelectDeal(num);
+    onSelectDeal(num, getDealDifficulty(num));
     onClose();
   };
 

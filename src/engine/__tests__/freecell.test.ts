@@ -9,6 +9,7 @@ import {
   isCardDimmedInTableau,
 } from '../rules';
 import { createNewGame, executeMove, undoMove, redoMove } from '../gameManager';
+import { calculateFreeCellScore } from '../leaderboard';
 import {
   getDealDifficulty,
   getRandomDealByDifficulty,
@@ -320,7 +321,48 @@ describe('FreeCell Difficulty Classification & Generation', () => {
       expect(config.description).toBeTruthy();
     }
   });
+
+  it('calculates live FreeCell score correctly', () => {
+    // Initial start of game (0 elapsed seconds, 0 moves)
+    expect(calculateFreeCellScore(0, 0)).toBe(10000);
+
+    // After 100 seconds and 20 moves: 10000 - 100*10 - 20*15 = 8700
+    expect(calculateFreeCellScore(100, 20)).toBe(8700);
+
+    // Respects floor of 100 points
+    expect(calculateFreeCellScore(5000, 500)).toBe(100);
+  });
+
+  it('allows restarting a deal with identical layout', () => {
+    const game = createNewGame(11982);
+    expect(game.dealNumber).toBe(11982);
+
+    const restarted = createNewGame(game.dealNumber);
+    expect(restarted.dealNumber).toBe(11982);
+    expect(restarted.movesCount).toBe(0);
+    expect(restarted.history).toHaveLength(0);
+    expect(restarted.redoStack).toHaveLength(0);
+
+    // Initial tableau cards should match card-by-card
+    for (let c = 0; c < 8; c++) {
+      expect(restarted.tableau[c].length).toBe(game.tableau[c].length);
+      for (let r = 0; r < restarted.tableau[c].length; r++) {
+        expect(restarted.tableau[c][r].id).toBe(game.tableau[c][r].id);
+      }
+    }
+  });
+
+  it('creates new games respecting difficulty preference', () => {
+    for (let i = 0; i < 3; i++) {
+      const easyGame = createNewGame(undefined, undefined, 'easy');
+      expect(easyGame.difficulty).toBe('easy');
+
+      const hardGame = createNewGame(undefined, undefined, 'hard');
+      expect(hardGame.difficulty).toBe('hard');
+    }
+  });
 });
+
 
 
 
